@@ -32,6 +32,57 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-2.0-flash"
     GEMINI_REQUEST_TIMEOUT_SECONDS: int = 120
+    GEMINI_SDK_HTTP_ATTEMPTS: int = 4
+    GEMINI_APP_RETRY_ATTEMPTS: int = 1
+    GEMINI_RETRY_INITIAL_DELAY_SECONDS: float = 1.0
+    GEMINI_RETRY_MAX_DELAY_SECONDS: float = 8.0
+
+    INTERVIEW_MIN_QUESTIONS: int = 3
+    INTERVIEW_MAX_QUESTIONS: int = 15
+    INTERVIEW_MAX_ANSWER_CHARS: int = 8000
+    INTERVIEW_MAX_QUESTION_TEXT_CHARS: int = 2000
+    SPEECH_FILLER_WORDS: str = (
+        "um,uh,like,actually,basically,literally,sort of,kind of,you know"
+    )
+
+    GITHUB_API_BASE: str = "https://api.github.com"
+    GITHUB_TOKEN: str = ""
+    GITHUB_MAX_README_CHARS: int = 24_000
+    GITHUB_MAX_TREE_PATHS: int = 80
+    GITHUB_MAX_REPOS_PER_LOOKUP: int = 50
+    GITHUB_HTTP_TIMEOUT_SECONDS: float = 20.0
+    GITHUB_METADATA_CACHE_MINUTES: int = 60
+
+    RAZORPAY_KEY_ID: str = ""
+    RAZORPAY_KEY_SECRET: str = ""
+    RAZORPAY_WEBHOOK_SECRET: str = ""
+    RAZORPAY_PLAN_ID_PRO: str = ""
+    RAZORPAY_PLAN_ID_PREMIUM: str = ""
+    BILLING_DEV_CHECKOUT: bool = False
+    PLATFORM_SUPER_ADMIN_EMAILS: str = ""
+
+    @property
+    def razorpay_configured(self) -> bool:
+        return bool(
+            self.RAZORPAY_KEY_ID.strip()
+            and self.RAZORPAY_KEY_SECRET.strip()
+        )
+
+    @property
+    def speech_filler_word_list(self) -> tuple[str, ...]:
+        return tuple(
+            item.strip()
+            for item in self.SPEECH_FILLER_WORDS.split(",")
+            if item.strip()
+        )
+
+    @property
+    def cors_origins(self) -> list[str]:
+        """Comma-separated allowed browser origins (e.g. local + Railway frontend URL)."""
+        raw = self.CORS_ORIGIN.strip()
+        if not raw:
+            return ["http://localhost:3000"]
+        return [part.strip() for part in raw.split(",") if part.strip()]
 
     @field_validator("MONGODB_URL")
     @classmethod
