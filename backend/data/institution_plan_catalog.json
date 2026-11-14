@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "disclaimer": "Institution plans govern seat limits for placement workspaces. Student AI usage remains on individual or college-negotiated billing.",
+  "plans": {
+    "institution_starter": {
+      "display_name": "Institution Starter",
+      "seat_limit": 100,
+      "features": ["analytics", "cohorts", "assignments"]
+    },
+    "institution_growth": {
+      "display_name": "Institution Growth",
+      "seat_limit": 500,
+      "features": ["analytics", "cohorts", "assignments", "audit_log", "exports"]
+    }
+  }
+}

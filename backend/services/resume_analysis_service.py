@@ -1,5 +1,13 @@
 from repositories.analysis_repository import AnalysisRepository, AnalysisRepositoryError
+from repositories.billing_repository import BillingRepository
+from repositories.credit_repository import CreditRepository
 from repositories.resume_repository import ResumeRepository
+from services.credit_service import (
+    CreditServiceError,
+    ensure_ai_operation_allowed,
+    safe_refund_ai_operation,
+)
+from services.entitlement_service import consume_meter, new_reservation_id
 from schemas.analysis_schema import (
     InterviewQuestionResponse,
     ResumeAnalysisResponse,
@@ -22,7 +30,11 @@ class ResumeAnalysisServiceError(Exception):
         self.status_code = status_code
 
 
-def _document_to_response(document: dict, cached: bool = False) -> ResumeAnalysisResponse:
+def _document_to_response(
+    document: dict,
+    cached: bool = False,
+    refresh_failed: bool = False,
+) -> ResumeAnalysisResponse:
     from bson import ObjectId
 
     analysis_id = document["_id"]
@@ -45,6 +57,7 @@ def _document_to_response(document: dict, cached: bool = False) -> ResumeAnalysi
             InterviewQuestionResponse.model_validate(item) for item in questions
         ],
         cached=cached,
+        refresh_failed=refresh_failed,
     )
 
 
@@ -82,6 +95,9 @@ async def analyze_resume(
     resume_repo: ResumeRepository,
     analysis_repo: AnalysisRepository,
     refresh: bool = False,
+    billing_repo: BillingRepository | None = None,
+    credit_repo: CreditRepository | None = None,
+    idempotency_key: str | None = None,
 ) -> ResumeAnalysisResponse:
     resume = await resume_repo.find_by_id_for_user(resume_id, user_id)
     if resume is None:
@@ -104,19 +120,76 @@ async def analyze_resume(
         if cached is not None:
             return _document_to_response(cached, cached=True)
 
+    charge_key: str | None = None
+    if billing_repo is not None and credit_repo is not None:
+        charge_key = idempotency_key or new_reservation_id()
+        try:
+            await ensure_ai_operation_allowed(
+                billing_repo,
+                credit_repo,
+                user_id,
+                "resume_analysis",
+                idempotency_key=charge_key,
+            )
+        except CreditServiceError as exc:
+            raise ResumeAnalysisServiceError(str(exc), status_code=exc.status_code) from exc
+    elif billing_repo is not None:
+        await consume_meter(
+            billing_repo,
+            user_id,
+            "resume_analysis",
+            reservation_id=new_reservation_id(),
+        )
+
     try:
         gemini_result = analyze_resume_text(extracted_text)
     except GeminiConfigurationError as exc:
+        if charge_key and billing_repo and credit_repo:
+            await safe_refund_ai_operation(
+                billing_repo, credit_repo, user_id, idempotency_key=charge_key
+            )
         raise ResumeAnalysisServiceError(str(exc), status_code=503) from exc
     except GeminiAuthError as exc:
+        if charge_key and billing_repo and credit_repo:
+            await safe_refund_ai_operation(
+                billing_repo, credit_repo, user_id, idempotency_key=charge_key
+            )
         raise ResumeAnalysisServiceError(str(exc), status_code=503) from exc
     except GeminiRateLimitError as exc:
+        if refresh:
+            fallback = await analysis_repo.find_latest_for_resume(user_id, resume_id)
+            if fallback is not None:
+                return _document_to_response(
+                    fallback, cached=True, refresh_failed=True
+                )
+        if charge_key and billing_repo and credit_repo:
+            await safe_refund_ai_operation(
+                billing_repo, credit_repo, user_id, idempotency_key=charge_key
+            )
         raise ResumeAnalysisServiceError(str(exc), status_code=429) from exc
     except GeminiUnavailableError as exc:
+        if refresh:
+            fallback = await analysis_repo.find_latest_for_resume(user_id, resume_id)
+            if fallback is not None:
+                return _document_to_response(
+                    fallback, cached=True, refresh_failed=True
+                )
+        if charge_key and billing_repo and credit_repo:
+            await safe_refund_ai_operation(
+                billing_repo, credit_repo, user_id, idempotency_key=charge_key
+            )
         raise ResumeAnalysisServiceError(str(exc), status_code=503) from exc
     except GeminiResponseError as exc:
+        if charge_key and billing_repo and credit_repo:
+            await safe_refund_ai_operation(
+                billing_repo, credit_repo, user_id, idempotency_key=charge_key
+            )
         raise ResumeAnalysisServiceError(str(exc), status_code=502) from exc
     except GeminiServiceError as exc:
+        if charge_key and billing_repo and credit_repo:
+            await safe_refund_ai_operation(
+                billing_repo, credit_repo, user_id, idempotency_key=charge_key
+            )
         raise ResumeAnalysisServiceError(str(exc), status_code=502) from exc
 
     analysis_dict, questions = _split_analysis_payload(gemini_result)

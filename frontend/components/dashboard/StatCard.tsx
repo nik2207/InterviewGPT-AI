@@ -5,24 +5,35 @@ interface StatCardProps {
   value: string;
   helper: string;
   icon: ReactNode;
+  accent?: "primary" | "secondary" | "neutral";
 }
 
-export function StatCard({ label, value, helper, icon }: StatCardProps) {
+export function StatCard({
+  label,
+  value,
+  helper,
+  icon,
+  accent = "neutral",
+}: StatCardProps) {
+  const accentClass =
+    accent === "primary"
+      ? "bg-app-primary-soft text-app-primary"
+      : accent === "secondary"
+        ? "bg-blue-50 text-blue-600"
+        : "bg-slate-100 text-slate-600";
+
   return (
-    <article
-      className="rounded-xl border border-slate-200 bg-white p-5 shadow-card"
-      aria-label={label}
-    >
+    <article className="app-card p-5" aria-label={label}>
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm font-medium text-slate-500">{label}</p>
-          <p className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-app-muted">{label}</p>
+          <p className="mt-2 text-3xl font-semibold tabular-nums tracking-tight text-app-ink">
             {value}
           </p>
-          <p className="mt-1 text-xs text-slate-500">{helper}</p>
+          <p className="mt-1 text-xs text-app-muted">{helper}</p>
         </div>
         <div
-          className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand-600"
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-control ${accentClass}`}
           aria-hidden="true"
         >
           {icon}

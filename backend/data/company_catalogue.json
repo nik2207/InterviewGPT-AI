@@ -1,0 +1,187 @@
+{
+  "version": 1,
+  "disclaimer": "Company profiles summarise publicly linked careers materials. They do not describe private interview processes.",
+  "companies": [
+    {
+      "id": "google",
+      "name": "Google",
+      "aliases": ["Alphabet"],
+      "industry": "Technology",
+      "headquarters": "Mountain View, USA",
+      "public_profile_summary": "Global technology company known for search, cloud, and consumer products. Public careers materials emphasise problem-solving and collaboration.",
+      "verified_public_sources": [
+        {
+          "label": "Google Careers",
+          "url": "https://careers.google.com/"
+        }
+      ],
+      "public_prep_topics": [
+        "Algorithms and data structures (from public SWE hiring guides)",
+        "System design discussion themes on public engineering blogs",
+        "Behavioural collaboration examples"
+      ],
+      "prep_material": [
+        {
+          "title": "How we hire (public overview)",
+          "source_type": "catalogue_public",
+          "source_url": "https://careers.google.com/how-we-hire/",
+          "summary": "Public page describes general hiring principles and skill assessment areas without guaranteeing a fixed interview format."
+        }
+      ]
+    },
+    {
+      "id": "microsoft",
+      "name": "Microsoft",
+      "aliases": ["MSFT"],
+      "industry": "Technology",
+      "headquarters": "Redmond, USA",
+      "public_profile_summary": "Enterprise and cloud software company. Public careers content highlights growth mindset and customer impact.",
+      "verified_public_sources": [
+        {
+          "label": "Microsoft Careers",
+          "url": "https://careers.microsoft.com/"
+        }
+      ],
+      "public_prep_topics": [
+        "Coding fundamentals",
+        "Cloud and product thinking",
+        "Leadership principles (public culture materials)"
+      ],
+      "prep_material": [
+        {
+          "title": "Life at Microsoft (public)",
+          "source_type": "catalogue_public",
+          "source_url": "https://careers.microsoft.com/",
+          "summary": "Public careers site lists role families and general expectations; formats vary by team."
+        }
+      ]
+    },
+    {
+      "id": "amazon",
+      "name": "Amazon",
+      "aliases": ["AWS"],
+      "industry": "Technology / Retail",
+      "headquarters": "Seattle, USA",
+      "public_profile_summary": "E-commerce and cloud provider. Public leadership principles are widely documented for candidates.",
+      "verified_public_sources": [
+        {
+          "label": "Amazon Jobs",
+          "url": "https://www.amazon.jobs/"
+        }
+      ],
+      "public_prep_topics": [
+        "Leadership Principles (public list)",
+        "Operational problem solving",
+        "Technical depth for SDE roles"
+      ],
+      "prep_material": [
+        {
+          "title": "Leadership Principles (public)",
+          "source_type": "catalogue_public",
+          "source_url": "https://www.amazon.jobs/content/en/our-workplace/leadership-principles",
+          "summary": "Public documentation of leadership principles used in hiring conversations; not a script of actual questions."
+        }
+      ]
+    },
+    {
+      "id": "infosys",
+      "name": "Infosys",
+      "aliases": [],
+      "industry": "IT Services",
+      "headquarters": "Bengaluru, India",
+      "public_profile_summary": "Global IT services and consulting firm. Public hiring pages describe campus and lateral programmes.",
+      "verified_public_sources": [
+        {
+          "label": "Infosys Careers",
+          "url": "https://www.infosys.com/careers.html"
+        }
+      ],
+      "public_prep_topics": [
+        "Aptitude and communication (public campus descriptions)",
+        "Technical fundamentals for service roles",
+        "HR and organisational fit"
+      ],
+      "prep_material": []
+    },
+    {
+      "id": "tcs",
+      "name": "Tata Consultancy Services",
+      "aliases": ["TCS"],
+      "industry": "IT Services",
+      "headquarters": "Mumbai, India",
+      "public_profile_summary": "Large IT services organisation with global delivery. Public materials describe multiple hiring tracks.",
+      "verified_public_sources": [
+        {
+          "label": "TCS Careers",
+          "url": "https://www.tcs.com/careers"
+        }
+      ],
+      "public_prep_topics": [
+        "Technical screening topics (public role descriptions)",
+        "Communication and teamwork",
+        "Managerial round themes (generic, public HR guidance)"
+      ],
+      "prep_material": []
+    },
+    {
+      "id": "jpmorgan",
+      "name": "JPMorgan Chase",
+      "aliases": ["JPMC"],
+      "industry": "Financial Services",
+      "headquarters": "New York, USA",
+      "public_profile_summary": "Global financial institution. Public technology careers pages describe engineering pathways.",
+      "verified_public_sources": [
+        {
+          "label": "JPMorgan Careers",
+          "url": "https://careers.jpmorgan.com/"
+        }
+      ],
+      "public_prep_topics": [
+        "Technical problem solving for engineering roles",
+        "Risk and compliance awareness (public role blurbs)",
+        "Behavioural professionalism"
+      ],
+      "prep_material": []
+    },
+    {
+      "id": "meta",
+      "name": "Meta",
+      "aliases": ["Facebook"],
+      "industry": "Technology",
+      "headquarters": "Menlo Park, USA",
+      "public_profile_summary": "Social technology company. Public engineering careers content references product impact and coding skills.",
+      "verified_public_sources": [
+        {
+          "label": "Meta Careers",
+          "url": "https://www.metacareers.com/"
+        }
+      ],
+      "public_prep_topics": [
+        "Product-minded coding",
+        "System design at scale (public engineering blog themes)",
+        "Cross-functional collaboration"
+      ],
+      "prep_material": []
+    },
+    {
+      "id": "accenture",
+      "name": "Accenture",
+      "aliases": [],
+      "industry": "Consulting / Technology",
+      "headquarters": "Dublin, Ireland",
+      "public_profile_summary": "Consulting and technology services. Public careers site lists practice areas and graduate programmes.",
+      "verified_public_sources": [
+        {
+          "label": "Accenture Careers",
+          "url": "https://www.accenture.com/careers"
+        }
+      ],
+      "public_prep_topics": [
+        "Case and problem structuring (public consulting prep guides)",
+        "Technical skills by practice",
+        "HR and values alignment"
+      ],
+      "prep_material": []
+    }
+  ]
+}

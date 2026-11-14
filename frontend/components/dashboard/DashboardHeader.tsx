@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
+import { CreditBalanceBadge } from "@/components/dashboard/CreditBalanceBadge";
 import type { UserProfile } from "@/types/user";
 
 interface DashboardHeaderProps {
@@ -56,12 +57,14 @@ export function DashboardHeader({
         >
           <MenuIcon />
         </button>
-        <p className="hidden text-sm text-slate-500 sm:block">
-          Interview preparation workspace
+        <p className="hidden text-sm text-app-muted sm:block">
+          InterviewGPT AI · preparation workspace
         </p>
       </div>
 
-      <div className="relative" ref={menuRef}>
+      <div className="flex items-center gap-3">
+        <CreditBalanceBadge />
+        <div className="relative" ref={menuRef}>
         <button
           type="button"
           className="flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-2 hover:bg-slate-50"
@@ -109,6 +112,7 @@ export function DashboardHeader({
             </button>
           </div>
         ) : null}
+        </div>
       </div>
     </header>
   );

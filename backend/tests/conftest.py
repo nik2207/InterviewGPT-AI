@@ -5,6 +5,19 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
+from core.dependencies import (
+    get_billing_repository,
+    get_credit_repository,
+    get_institution_analytics_repository,
+    get_institution_audit_repository,
+    get_institution_repository,
+)
+from tests.fake_billing_repository import FakeBillingRepository
+from tests.fake_credit_repository import FakeCreditRepository
+from tests.fake_institution_analytics_repository import FakeInstitutionAnalyticsRepository
+from tests.fake_institution_audit_repository import FakeInstitutionAuditRepository
+from tests.fake_institution_repository import FakeInstitutionRepository
+
 # Configure required settings before any application imports.
 os.environ.setdefault("MONGODB_URL", "mongodb://localhost:27017")
 os.environ.setdefault("DATABASE_NAME", "interviewgpt_test")
@@ -19,6 +32,7 @@ os.environ.setdefault(
 os.environ.setdefault("CORS_ORIGIN", "http://localhost:3000")
 os.environ.setdefault("GEMINI_API_KEY", "test-gemini-api-key")
 os.environ.setdefault("GEMINI_MODEL", "gemini-2.0-flash")
+os.environ.setdefault("BILLING_DEV_CHECKOUT", "true")
 
 
 @pytest.fixture
@@ -36,6 +50,17 @@ def client() -> TestClient:
         from core.database import get_db
 
         app.dependency_overrides[get_db] = override_get_db
+        app.dependency_overrides[get_billing_repository] = lambda: FakeBillingRepository()
+        app.dependency_overrides[get_credit_repository] = lambda: FakeCreditRepository()
+        app.dependency_overrides[get_institution_repository] = (
+            lambda: FakeInstitutionRepository()
+        )
+        app.dependency_overrides[get_institution_analytics_repository] = (
+            lambda: FakeInstitutionAnalyticsRepository()
+        )
+        app.dependency_overrides[get_institution_audit_repository] = (
+            lambda: FakeInstitutionAuditRepository()
+        )
 
         with TestClient(app) as test_client:
             yield test_client

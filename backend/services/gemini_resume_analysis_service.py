@@ -1,12 +1,17 @@
 import json
 import logging
 
-from google import genai
 from google.genai import errors as genai_errors
 from google.genai import types
 from pydantic import ValidationError
 
+from core.config.settings import settings
 from schemas.analysis_schema import GeminiResumeAnalysisResult
+from services.gemini_client import (
+    build_gemini_client,
+    call_with_transient_retries,
+    sanitize_provider_error,
+)
 from services.gemini_config import (
     GeminiConfigurationError,
     get_gemini_api_key,
@@ -62,40 +67,49 @@ def _build_prompt(resume_text: str) -> str:
 
 
 def _map_genai_exception(exc: Exception) -> GeminiServiceError:
+    info = sanitize_provider_error(exc)
+    status = info.get("http_status")
+    message = (info.get("provider_message") or str(exc)).lower()
+
     if isinstance(exc, genai_errors.ClientError):
-        status = getattr(exc, "status_code", None) or getattr(exc, "code", None)
-        message = str(exc).lower()
         if status in (401, 403) or "api key" in message or "permission" in message:
             return GeminiAuthError("Gemini API credentials are invalid.")
         if status == 429 or "quota" in message or "rate" in message:
             return GeminiRateLimitError(
                 "Gemini API rate limit or quota exceeded. Try again later."
             )
-        if status == 404 or "not found" in message or "model" in message:
+        if status == 404:
             return GeminiUnavailableError(
-                "The configured Gemini model is unavailable."
+                "The configured Gemini model is unavailable for this API key."
+            )
+        if status == 400:
+            return GeminiResponseError(
+                "Gemini rejected the analysis request configuration."
             )
         return GeminiUnavailableError("Gemini API request failed.")
 
     if isinstance(exc, genai_errors.ServerError):
+        if status == 503:
+            return GeminiUnavailableError(
+                "Gemini service is temporarily unavailable. Try again later."
+            )
         return GeminiUnavailableError(
-            "Gemini service is temporarily unavailable. Try again later."
+            "Gemini service returned a temporary error. Try again later."
+        )
+
+    if isinstance(exc, TimeoutError):
+        return GeminiUnavailableError(
+            "Gemini request timed out. Try again with a shorter resume or later."
         )
 
     return GeminiServiceError("Gemini analysis failed.")
 
 
-def analyze_resume_text(resume_text: str) -> GeminiResumeAnalysisResult:
-    try:
-        api_key = get_gemini_api_key()
-        model = get_gemini_model()
-    except GeminiConfigurationError:
-        raise
+def _generate_analysis(api_key: str, model: str, resume_text: str):
+    client = build_gemini_client(api_key)
 
-    client = genai.Client(api_key=api_key)
-
-    try:
-        response = client.models.generate_content(
+    def _call():
+        return client.models.generate_content(
             model=model,
             contents=_build_prompt(resume_text),
             config=types.GenerateContentConfig(
@@ -105,10 +119,33 @@ def analyze_resume_text(resume_text: str) -> GeminiResumeAnalysisResult:
                 response_schema=GeminiResumeAnalysisResult,
             ),
         )
+
+    return call_with_transient_retries(
+        _call,
+        max_attempts=max(int(settings.GEMINI_APP_RETRY_ATTEMPTS), 1),
+        initial_delay=float(settings.GEMINI_RETRY_INITIAL_DELAY_SECONDS),
+        max_delay=float(settings.GEMINI_RETRY_MAX_DELAY_SECONDS),
+        operation_name="gemini_resume_analysis",
+    )
+
+
+def analyze_resume_text(resume_text: str) -> GeminiResumeAnalysisResult:
+    try:
+        api_key = get_gemini_api_key()
+        model = get_gemini_model()
+    except GeminiConfigurationError:
+        raise
+
+    try:
+        response = _generate_analysis(api_key, model, resume_text)
     except GeminiConfigurationError:
         raise
     except Exception as exc:
-        logger.warning("Gemini generate_content failed: %s", type(exc).__name__)
+        info = sanitize_provider_error(exc)
+        logger.warning(
+            "Gemini generate_content failed: %s",
+            info,
+        )
         raise _map_genai_exception(exc) from exc
 
     raw_text = getattr(response, "text", None)

@@ -11,4 +11,5 @@ export interface InterviewActivityItem {
   title: string;
   completedAt: string;
   score: number | null;
+  questionCount?: number;
 }

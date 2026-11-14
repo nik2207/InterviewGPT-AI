@@ -4,8 +4,38 @@
 
 :root {
   color-scheme: light;
+  --app-bg: #f5f6fa;
+  --surface: #ffffff;
+  --sidebar-bg: #171923;
+  --sidebar-hover: #272b39;
+  --primary: #7652f6;
+  --primary-hover: #6240df;
+  --primary-soft: #f0ebff;
+  --secondary: #3b82f6;
+  --text-primary: #202333;
+  --text-secondary: #6b7280;
+  --border: #e7e9f0;
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --radius-card: 16px;
+  --radius-control: 10px;
 }
 
 body {
-  @apply bg-slate-50 text-slate-900 antialiased;
+  @apply antialiased;
+  background-color: var(--app-bg);
+  color: var(--text-primary);
+}
+
+@layer components {
+  .app-card {
+    @apply rounded-2xl border border-[color:var(--border)] bg-[color:var(--surface)] shadow-sm;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-[10px] bg-[color:var(--primary)] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[color:var(--primary-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--primary)] disabled:opacity-60;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-[10px] border border-[color:var(--border)] bg-white px-4 py-2.5 text-sm font-semibold text-[color:var(--text-primary)] transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--primary)] disabled:opacity-60;
+  }
 }

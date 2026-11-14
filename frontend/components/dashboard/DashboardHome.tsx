@@ -3,11 +3,18 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { ScoreTrendChart } from "@/components/dashboard/ScoreTrendChart";
 import { StatCard } from "@/components/dashboard/StatCard";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { LoadingSkeleton } from "@/components/ui/LoadingSkeleton";
 import {
   fetchDashboardStats,
   fetchRecentInterviewActivity,
+  fetchScoreTrend,
+  fetchSkillGapInsights,
+  type SkillGapInsight,
 } from "@/lib/api/dashboard";
+import type { ScoreTrendPoint } from "@/lib/api/dashboard";
 import type { DashboardStats, InterviewActivityItem } from "@/types/dashboard";
 import type { UserProfile } from "@/types/user";
 
@@ -15,35 +22,40 @@ interface DashboardHomeProps {
   user: UserProfile;
 }
 
-function formatMetric(value: number | null, suffix = ""): string {
-  if (value === null) {
-    return "—";
-  }
-  return `${value}${suffix}`;
+function formatCount(value: number | null): string {
+  return value === null ? "—" : String(value);
+}
+
+function formatScore(value: number | null): string {
+  return value === null ? "—" : `${value}/100`;
 }
 
 export function DashboardHome({ user }: DashboardHomeProps) {
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [activity, setActivity] = useState<InterviewActivityItem[] | null>(
-    null
-  );
+  const [activity, setActivity] = useState<InterviewActivityItem[] | null>(null);
+  const [trend, setTrend] = useState<ScoreTrendPoint[] | null>(null);
+  const [gaps, setGaps] = useState<SkillGapInsight[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-
     async function load() {
       setLoading(true);
       setError(null);
       try {
-        const [statsResult, activityResult] = await Promise.all([
-          fetchDashboardStats(),
-          fetchRecentInterviewActivity(),
-        ]);
+        const [statsResult, activityResult, trendResult, gapsResult] =
+          await Promise.all([
+            fetchDashboardStats(),
+            fetchRecentInterviewActivity(),
+            fetchScoreTrend(),
+            fetchSkillGapInsights(),
+          ]);
         if (!cancelled) {
           setStats(statsResult);
           setActivity(activityResult);
+          setTrend(trendResult);
+          setGaps(gapsResult);
         }
       } catch {
         if (!cancelled) {
@@ -55,7 +67,6 @@ export function DashboardHome({ user }: DashboardHomeProps) {
         }
       }
     }
-
     void load();
     return () => {
       cancelled = true;
@@ -63,229 +74,236 @@ export function DashboardHome({ user }: DashboardHomeProps) {
   }, []);
 
   const firstName = user.name?.split(" ")[0] || "there";
+  const hasCompleted = (stats?.interviewsCompleted ?? 0) > 0;
+
+  const recommendations = [
+    !hasCompleted
+      ? {
+          title: "Start your first mock interview",
+          body: "Practice with resume-based questions and AI feedback.",
+          href: "/dashboard/interviews",
+          cta: "Start interview",
+        }
+      : null,
+    {
+      title: "Analyse or upload a resume",
+      body: "Get tailored skills, gaps and interview questions.",
+      href: "/dashboard/resumes",
+      cta: "Resume workspace",
+    },
+    hasCompleted
+      ? {
+          title: "Review insights & reports",
+          body: "Open history, scores and downloadable PDF reports.",
+          href: "/dashboard/interviews/history",
+          cta: "View history",
+        }
+      : null,
+    hasCompleted
+      ? {
+          title: "Open preparation plan",
+          body: "Coaching recommendations from your latest interview evidence.",
+          href: "/dashboard/career",
+          cta: "Preparation plan",
+        }
+      : null,
+  ].filter(Boolean) as Array<{
+    title: string;
+    body: string;
+    href: string;
+    cta: string;
+  }>;
 
   return (
-    <div className="space-y-8">
-      <section
-        className="rounded-2xl border border-brand-100 bg-gradient-to-br from-brand-50 to-white p-6 sm:p-8"
-        aria-labelledby="welcome-heading"
-      >
-        <h1
-          id="welcome-heading"
-          className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl"
-        >
-          Welcome back, {firstName}
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
-          Prepare for your next interview with AI-guided mock sessions, resume
-          feedback, and targeted practice. Your workspace is ready when you are.
-        </p>
-        <div className="mt-6">
-          <button
-            type="button"
-            className="inline-flex items-center justify-center rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
-            aria-label="Start mock interview"
-          >
-            Start Mock Interview
-          </button>
-          <p className="mt-2 text-xs text-slate-500">
-            Mock interview flow will be available in a future release.
-          </p>
+    <div className="mx-auto max-w-7xl space-y-6">
+      <section className="app-card overflow-hidden p-6 sm:p-8">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-sm font-medium text-app-primary">Welcome back</p>
+            <h1 className="mt-1 text-2xl font-semibold text-app-ink sm:text-3xl">
+              Hi {firstName}, ready to practise?
+            </h1>
+            <p className="mt-2 max-w-xl text-sm text-app-muted">
+              Your personal interview preparation workspace — track sessions,
+              scores and focus areas from real mock interviews.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/dashboard/interviews" className="btn-primary">
+              Start mock interview
+            </Link>
+            <Link href="/dashboard/career" className="btn-secondary">
+              Preparation plan
+            </Link>
+          </div>
         </div>
       </section>
 
       {error ? (
-        <div
-          className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
-          role="alert"
-        >
+        <div className="rounded-control border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900" role="alert">
           {error}
         </div>
       ) : null}
 
-      <section aria-labelledby="stats-heading">
-        <h2 id="stats-heading" className="text-lg font-semibold text-slate-900">
-          Your snapshot
-        </h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Metrics appear here once interview analytics endpoints are connected.
-        </p>
-        {loading ? (
-          <div
-            className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
-            aria-label="Loading statistics"
-            aria-busy="true"
-          >
-            {Array.from({ length: 4 }).map((_, index) => (
-              <div
-                key={index}
-                className="h-32 animate-pulse rounded-xl bg-slate-100"
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard
-              label="Interviews completed"
-              value={formatMetric(stats?.interviewsCompleted ?? null)}
-              helper="No completed sessions yet"
-              icon={<span>🎯</span>}
-            />
-            <StatCard
-              label="Practice sessions"
-              value={formatMetric(stats?.practiceSessions ?? null)}
-              helper="Schedule your first practice"
-              icon={<span>📝</span>}
-            />
-            <StatCard
-              label="Average score"
-              value={formatMetric(stats?.averageScore ?? null)}
-              helper="Scores available after interviews"
-              icon={<span>⭐</span>}
-            />
-            <StatCard
-              label="Preparation progress"
-              value={formatMetric(
-                stats?.preparationProgressPercent ?? null,
-                stats?.preparationProgressPercent === null ? "" : "%"
-              )}
-              helper="Track progress as you practice"
-              icon={<span>📈</span>}
-            />
-          </div>
-        )}
-      </section>
-
-      <section id="quick-actions" aria-labelledby="quick-actions-heading">
-        <h2
-          id="quick-actions-heading"
-          className="text-lg font-semibold text-slate-900"
-        >
-          Quick actions
-        </h2>
-        <div className="mt-4 grid gap-4 md:grid-cols-3">
-          {[
-            {
-              title: "Resume Analysis",
-              body: "Upload a resume and get tailored feedback.",
-            },
-            {
-              title: "Interview History",
-              body: "Review past mock interviews and scores.",
-            },
-            {
-              title: "Question Practice",
-              body: "Drill common questions by role and level.",
-            },
-          ].map((action) => {
-            const isResume = action.title === "Resume Analysis";
-            const className =
-              "rounded-xl border border-slate-200 bg-white p-5 text-left shadow-card transition hover:border-brand-200 hover:bg-brand-50/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600";
-
-            if (isResume) {
-              return (
-                <Link
-                  key={action.title}
-                  href="/dashboard/resumes"
-                  className={className}
-                >
-                  <h3 className="font-medium text-slate-900">{action.title}</h3>
-                  <p className="mt-2 text-sm text-slate-600">{action.body}</p>
-                  <p className="mt-3 text-xs font-medium text-brand-700">
-                    Upload PDF
-                  </p>
-                </Link>
-              );
-            }
-
-            return (
-              <button
-                key={action.title}
-                type="button"
-                className={className}
-                aria-label={`${action.title} — coming soon`}
-              >
-                <h3 className="font-medium text-slate-900">{action.title}</h3>
-                <p className="mt-2 text-sm text-slate-600">{action.body}</p>
-                <p className="mt-3 text-xs font-medium text-brand-700">
-                  Coming soon
+      <section className="grid gap-4 lg:grid-cols-3">
+        <div className="app-card p-6 lg:col-span-2">
+          <h2 className="text-lg font-semibold text-app-ink">Readiness overview</h2>
+          <p className="mt-1 text-sm text-app-muted">
+            Based on completed, evaluated mock interviews. Not a hiring prediction.
+          </p>
+          {loading ? (
+            <LoadingSkeleton rows={1} className="mt-4 h-24" />
+          ) : (
+            <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-4xl font-semibold tabular-nums text-app-ink">
+                  {formatScore(stats?.averageScore ?? null)}
                 </p>
-              </button>
-            );
-          })}
+                <p className="mt-1 text-sm text-app-muted">
+                  {hasCompleted
+                    ? `Average across ${stats?.interviewsCompleted} completed interview(s)`
+                    : "Not enough data yet — complete a mock interview"}
+                </p>
+              </div>
+              <div className="rounded-control bg-app-primary-soft px-4 py-3 text-sm text-app-primary">
+                {hasCompleted
+                  ? `${stats?.practiceSessions} practice session(s) started`
+                  : "Upload a resume and run analysis to unlock richer insights"}
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+          {loading ? (
+            <LoadingSkeleton rows={2} className="h-24" />
+          ) : (
+            <>
+              <StatCard
+                label="Completed"
+                value={formatCount(stats?.interviewsCompleted ?? null)}
+                helper="Finished mock interviews"
+                accent="primary"
+                icon={<span>◎</span>}
+              />
+              <StatCard
+                label="Practice sessions"
+                value={formatCount(stats?.practiceSessions ?? null)}
+                helper="Started (in progress + done)"
+                icon={<span>▣</span>}
+              />
+            </>
+          )}
         </div>
       </section>
 
-      <section
-        id="activity"
-        className="grid gap-6 lg:grid-cols-5"
-        aria-labelledby="activity-heading"
-      >
-        <div className="lg:col-span-3">
-          <h2
-            id="activity-heading"
-            className="text-lg font-semibold text-slate-900"
-          >
-            Recent interview activity
-          </h2>
-          <div className="mt-4 rounded-xl border border-slate-200 bg-white p-6 shadow-card">
-            {loading ? (
-              <div className="h-24 animate-pulse rounded-lg bg-slate-100" />
-            ) : activity && activity.length > 0 ? (
-              <ul className="space-y-3">
-                {activity.map((item) => (
-                  <li
-                    key={item.id}
-                    className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2"
-                  >
-                    <span className="text-sm font-medium text-slate-800">
-                      {item.title}
-                    </span>
-                    <span className="text-xs text-slate-500">
+      <section className="grid gap-4 xl:grid-cols-3">
+        <div className="app-card p-6 xl:col-span-2">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold text-app-ink">Recent interviews</h2>
+            <Link
+              href="/dashboard/interviews/history"
+              className="text-sm font-medium text-app-primary hover:underline"
+            >
+              View all
+            </Link>
+          </div>
+          {loading ? (
+            <LoadingSkeleton className="mt-4 h-16" rows={3} />
+          ) : activity && activity.length > 0 ? (
+            <ul className="mt-4 divide-y divide-app-border">
+              {activity.map((item) => (
+                <li key={item.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
+                  <div>
+                    <p className="font-medium text-app-ink">{item.title}</p>
+                    <p className="text-xs text-app-muted">
                       {item.completedAt}
+                      {item.questionCount ? ` · ${item.questionCount} questions` : ""}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-semibold tabular-nums text-app-primary">
+                      {item.score !== null ? `${item.score}/100` : "—"}
                     </span>
-                  </li>
-                ))}
-              </ul>
+                    <Link
+                      href={`/dashboard/interviews/history/${item.id}/review`}
+                      className="text-sm text-app-muted hover:text-app-primary"
+                    >
+                      Report
+                    </Link>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyState
+              title="No completed interviews yet"
+              description="Start a mock interview to see activity and scores here."
+              actionLabel="Start mock interview"
+              actionHref="/dashboard/interviews"
+            />
+          )}
+        </div>
+
+        <div className="app-card p-6">
+          <h2 className="text-lg font-semibold text-app-ink">Score trend</h2>
+          <p className="mt-1 text-sm text-app-muted">Recent completed sessions</p>
+          <div className="mt-4">
+            {loading ? (
+              <LoadingSkeleton rows={1} className="h-40" />
             ) : (
-              <div className="text-center">
-                <p className="text-sm font-medium text-slate-800">
-                  No interviews yet
-                </p>
-                <p className="mt-1 text-sm text-slate-500">
-                  Start a mock interview to see your activity and feedback here.
-                </p>
-              </div>
+              <ScoreTrendChart points={trend ?? []} />
             )}
           </div>
         </div>
+      </section>
 
-        <div className="lg:col-span-2">
-          <h2 className="text-lg font-semibold text-slate-900">
-            Preparation progress
-          </h2>
-          <div className="mt-4 rounded-xl border border-slate-200 bg-white p-6 shadow-card">
-            <p className="text-sm text-slate-600">
-              Complete mock interviews and practice sessions to build a
-              personalized preparation plan.
+      <section className="grid gap-4 lg:grid-cols-2">
+        <div className="app-card p-6">
+          <h2 className="text-lg font-semibold text-app-ink">Skill gaps & focus</h2>
+          <p className="mt-1 text-sm text-app-muted">
+            From your most recent evaluated mock interview (when available).
+          </p>
+          {loading ? (
+            <LoadingSkeleton className="mt-4 h-14" rows={3} />
+          ) : gaps && gaps.length > 0 ? (
+            <ul className="mt-4 space-y-3">
+              {gaps.map((gap) => (
+                <li
+                  key={gap.evidence}
+                  className="rounded-control border border-app-border px-3 py-2"
+                >
+                  <p className="text-sm font-medium text-app-ink">{gap.label}</p>
+                  <p className="mt-1 text-xs text-app-muted">{gap.evidence}</p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-4 text-sm text-app-muted">
+              Complete a mock interview or analyse a resume to surface improvement
+              areas.
             </p>
-            <div className="mt-4">
-              <div className="flex items-center justify-between text-xs text-slate-500">
-                <span>Overall readiness</span>
-                <span>Not available</span>
-              </div>
-              <div
-                className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"
-                role="progressbar"
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={0}
-                aria-label="Preparation progress"
+          )}
+        </div>
+
+        <div className="app-card p-6">
+          <h2 className="text-lg font-semibold text-app-ink">Recommended next steps</h2>
+          <ul className="mt-4 space-y-3">
+            {recommendations.map((rec) => (
+              <li
+                key={rec.href}
+                className="rounded-control border border-app-border p-4 transition hover:border-app-primary/40"
               >
-                <div className="h-full w-0 rounded-full bg-brand-500" />
-              </div>
-            </div>
-          </div>
+                <p className="font-medium text-app-ink">{rec.title}</p>
+                <p className="mt-1 text-sm text-app-muted">{rec.body}</p>
+                <Link
+                  href={rec.href}
+                  className="mt-3 inline-block text-sm font-semibold text-app-primary hover:underline"
+                >
+                  {rec.cta} →
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
     </div>
