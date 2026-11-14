@@ -1,10 +1,16 @@
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, UploadFile, status
 
 from core.dependencies import (
     get_analysis_repository,
+    get_billing_repository,
+    get_credit_repository,
     get_current_user,
     get_resume_repository,
 )
+from repositories.billing_repository import BillingRepository
+from repositories.credit_repository import CreditRepository
+from services.credit_idempotency import resolve_idempotency_key
+from services.entitlement_service import EntitlementError
 from models.resume_model import resume_document_to_metadata
 from models.user_model import UserPublic
 from repositories.resume_repository import ResumeRepository
@@ -72,6 +78,9 @@ async def analyze_resume_endpoint(
     current_user: UserPublic = Depends(get_current_user),
     resume_repo: ResumeRepository = Depends(get_resume_repository),
     analysis_repo: AnalysisRepository = Depends(get_analysis_repository),
+    billing_repo: BillingRepository = Depends(get_billing_repository),
+    credit_repo: CreditRepository = Depends(get_credit_repository),
+    x_idempotency_key: str | None = Header(None, alias="X-Idempotency-Key"),
 ) -> ResumeAnalysisResponse:
     try:
         return await analyze_resume(
@@ -80,7 +89,12 @@ async def analyze_resume_endpoint(
             resume_repo=resume_repo,
             analysis_repo=analysis_repo,
             refresh=refresh,
+            billing_repo=billing_repo,
+            credit_repo=credit_repo,
+            idempotency_key=resolve_idempotency_key(x_idempotency_key),
         )
+    except EntitlementError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from None
     except ResumeAnalysisServiceError as exc:
         raise HTTPException(
             status_code=exc.status_code,

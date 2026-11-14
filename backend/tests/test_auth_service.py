@@ -42,8 +42,11 @@ def test_verify_google_token_wrong_audience():
 
 
 def test_verify_google_token_success(sample_google_claims):
+    from core.config.settings import settings
+
+    claims_payload = {**sample_google_claims, "aud": settings.GOOGLE_CLIENT_ID}
     with patch("services.auth_service.id_token.verify_oauth2_token") as mock_verify:
-        mock_verify.return_value = sample_google_claims
+        mock_verify.return_value = claims_payload
         claims = verify_google_token("valid-token")
         assert claims["sub"] == sample_google_claims["sub"]
         assert claims["email"] == sample_google_claims["email"]

@@ -84,6 +84,7 @@ class ResumeAnalysisResponse(BaseModel):
     analysis: ResumeAnalysisSectionsResponse
     interview_questions: list[InterviewQuestionResponse]
     cached: bool = False
+    refresh_failed: bool = False
 
 
 class AnalyzeResumeQuery(BaseModel):

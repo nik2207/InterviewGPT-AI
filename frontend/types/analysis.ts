@@ -32,4 +32,5 @@ export interface ResumeAnalysisResult {
   analysis: ResumeAnalysisSections;
   interview_questions: InterviewQuestion[];
   cached?: boolean;
+  refresh_failed?: boolean;
 }

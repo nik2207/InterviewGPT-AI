@@ -140,6 +140,12 @@ export default function ResumesPage() {
           Upload a PDF resume, then run Gemini-powered analysis to get structured
           feedback and tailored interview questions based on your resume content.
         </p>
+        <a
+          href="/dashboard/resumes/builder"
+          className="mt-3 inline-block text-sm font-medium text-brand-700 hover:underline"
+        >
+          Open ATS resume builder (separate from uploads)
+        </a>
       </header>
 
       <ResumeUploadPanel onUploaded={handleUploaded} />
@@ -194,6 +200,15 @@ export default function ResumesPage() {
 
         {analysisResult && !analysisLoading ? (
           <div className="mt-4">
+            {analysisResult.refresh_failed ? (
+              <p
+                className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+                role="status"
+              >
+                A new analysis could not be generated right now. Showing your
+                last saved results.
+              </p>
+            ) : null}
             <ResumeAnalysisResults result={analysisResult} />
           </div>
         ) : null}

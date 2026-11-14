@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "currency": "INR",
+  "charging_policy": "Credits are charged when the server accepts an AI operation (before the model runs). Failed operations are refunded automatically when the failure is reported with the same idempotency key.",
+  "plan_allowance_meter": "ai_credit",
+  "operations": {
+    "resume_analysis": {
+      "label": "Resume analysis",
+      "credit_cost": 3,
+      "meter_fallback": "resume_analysis"
+    },
+    "mock_interview_session": {
+      "label": "Mock interview session",
+      "credit_cost": 5,
+      "meter_fallback": "mock_interview"
+    },
+    "voice_interview_session": {
+      "label": "AI voice interview session",
+      "credit_cost": 8,
+      "meter_fallback": "voice_interview"
+    },
+    "job_match": {
+      "label": "Job description match",
+      "credit_cost": 6,
+      "meter_fallback": "job_match"
+    },
+    "preparation_plan": {
+      "label": "Preparation plan generation",
+      "credit_cost": 10,
+      "meter_fallback": "preparation_plan"
+    },
+    "career_readiness_report": {
+      "label": "Career readiness report",
+      "credit_cost": 12,
+      "meter_fallback": "career_readiness"
+    },
+    "premium_coaching_eval": {
+      "label": "Premium answer coaching",
+      "credit_cost": 2,
+      "meter_fallback": null
+    },
+    "premium_report_pdf": {
+      "label": "Premium PDF export",
+      "credit_cost": 2,
+      "meter_fallback": "premium_report_pdf"
+    }
+  },
+  "topup_packs": [
+    {
+      "pack_id": "pack_50",
+      "display_name": "50 AI credits",
+      "credits": 50,
+      "price_inr": 199,
+      "expiry_days": null
+    },
+    {
+      "pack_id": "pack_150",
+      "display_name": "150 AI credits",
+      "credits": 150,
+      "price_inr": 499,
+      "expiry_days": null
+    },
+    {
+      "pack_id": "pack_500",
+      "display_name": "500 AI credits",
+      "credits": 500,
+      "price_inr": 1499,
+      "expiry_days": 365
+    }
+  ]
+}

@@ -1,0 +1,115 @@
+{
+  "version": 1,
+  "currency": "INR",
+  "meters": {
+    "resume_analysis": {
+      "label": "Resume analyses",
+      "reset": "monthly"
+    },
+    "mock_interview": {
+      "label": "Mock interviews",
+      "reset": "monthly"
+    },
+    "job_match": {
+      "label": "Job description matches",
+      "reset": "monthly"
+    },
+    "preparation_plan": {
+      "label": "Preparation plans",
+      "reset": "monthly"
+    },
+    "career_readiness": {
+      "label": "Career readiness reports",
+      "reset": "monthly"
+    },
+    "voice_interview": {
+      "label": "Voice interview sessions",
+      "reset": "monthly"
+    },
+    "ai_credit": {
+      "label": "AI credits",
+      "reset": "monthly"
+    },
+    "premium_report_pdf": {
+      "label": "Premium PDF exports",
+      "reset": "monthly"
+    }
+  },
+  "plans": {
+    "free": {
+      "display_name": "Free",
+      "tier_rank": 0,
+      "price_inr": 0,
+      "razorpay_plan_id_setting": null,
+      "limits": {
+        "resume_analysis": 3,
+        "mock_interview": 5,
+        "job_match": 0,
+        "preparation_plan": 0,
+        "career_readiness": 0,
+        "voice_interview": 0,
+        "ai_credit": 10,
+        "premium_report_pdf": 3
+      },
+      "features": {
+        "job_matching": false,
+        "detailed_answer_coaching": false,
+        "preparation_plans": false,
+        "career_readiness": false,
+        "voice_interview": false,
+        "premium_analytics": false,
+        "basic_interview_history": true
+      }
+    },
+    "pro": {
+      "display_name": "Pro",
+      "tier_rank": 1,
+      "price_inr": 799,
+      "razorpay_plan_id_setting": "RAZORPAY_PLAN_ID_PRO",
+      "limits": {
+        "resume_analysis": 25,
+        "mock_interview": 40,
+        "job_match": 20,
+        "preparation_plan": 10,
+        "career_readiness": 5,
+        "voice_interview": 5,
+        "ai_credit": 200,
+        "premium_report_pdf": 10
+      },
+      "features": {
+        "job_matching": true,
+        "detailed_answer_coaching": true,
+        "preparation_plans": true,
+        "career_readiness": true,
+        "voice_interview": true,
+        "premium_analytics": false,
+        "basic_interview_history": true
+      }
+    },
+    "premium": {
+      "display_name": "Premium",
+      "tier_rank": 2,
+      "price_inr": 1499,
+      "razorpay_plan_id_setting": "RAZORPAY_PLAN_ID_PREMIUM",
+      "limits": {
+        "resume_analysis": 100,
+        "mock_interview": 120,
+        "job_match": 80,
+        "preparation_plan": 40,
+        "career_readiness": 20,
+        "voice_interview": 40,
+        "ai_credit": 800,
+        "premium_report_pdf": 50
+      },
+      "features": {
+        "job_matching": true,
+        "detailed_answer_coaching": true,
+        "preparation_plans": true,
+        "career_readiness": true,
+        "voice_interview": true,
+        "premium_analytics": true,
+        "basic_interview_history": true
+      }
+    }
+  }
+}

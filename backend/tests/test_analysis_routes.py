@@ -15,7 +15,10 @@ from core.dependencies import (
 from core.security.jwt import create_access_token
 from schemas.analysis_schema import GeminiResumeAnalysisResult
 from services.gemini_config import GeminiConfigurationError
-from services.gemini_resume_analysis_service import GeminiResponseError
+from services.gemini_resume_analysis_service import (
+    GeminiResponseError,
+    GeminiUnavailableError,
+)
 from tests.fixtures_analysis import sample_gemini_analysis_result
 from tests.pdf_fixtures import build_text_pdf
 from tests.test_auth_routes import InMemorySessionRepository
@@ -187,6 +190,55 @@ def test_analyze_invalid_model_output(_mock_analyze, analysis_client):
         headers=headers,
     )
     assert response.status_code == 502
+
+
+@patch(
+    "services.resume_analysis_service.analyze_resume_text",
+    side_effect=GeminiUnavailableError("temporary"),
+)
+def test_refresh_failure_returns_saved_analysis(mock_analyze, analysis_client):
+    client, _, analysis_repo, headers, resume_id = analysis_client
+    saved_doc = {
+        "_id": ObjectId("507f1f77bcf86cd799439088"),
+        "user_id": "user",
+        "resume_id": resume_id,
+        "content_sha256": "sha-resume-1",
+        "model": "gemini-2.0-flash",
+        "status": "completed",
+        "analysis": sample_gemini_analysis_result().analysis.model_dump(
+            exclude={"interview_questions"}
+        ),
+        "interview_questions": [],
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
+    }
+    analysis_repo.find_latest_for_resume = AsyncMock(return_value=saved_doc)
+
+    response = client.post(
+        f"/api/v1/resumes/{resume_id}/analyze?refresh=true",
+        headers=headers,
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["cached"] is True
+    assert body["refresh_failed"] is True
+    mock_analyze.assert_called_once()
+    analysis_repo.create_analysis.assert_not_awaited()
+
+
+@patch(
+    "services.resume_analysis_service.analyze_resume_text",
+    side_effect=GeminiUnavailableError("temporary"),
+)
+def test_analyze_provider_unavailable_returns_503(_mock_analyze, analysis_client):
+    client, _, analysis_repo, headers, resume_id = analysis_client
+    analysis_repo.find_latest_for_resume = AsyncMock(return_value=None)
+
+    response = client.post(
+        f"/api/v1/resumes/{resume_id}/analyze",
+        headers=headers,
+    )
+    assert response.status_code == 503
 
 
 def test_get_analysis_not_found(analysis_client):
