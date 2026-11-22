@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     RESUME_MIN_EXTRACTED_TEXT_CHARS: int = 40
 
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-2.0-flash"
+    GEMINI_MODEL: str = "gemini-3.8-flash"
     GEMINI_REQUEST_TIMEOUT_SECONDS: int = 120
     GEMINI_SDK_HTTP_ATTEMPTS: int = 4
     GEMINI_APP_RETRY_ATTEMPTS: int = 1

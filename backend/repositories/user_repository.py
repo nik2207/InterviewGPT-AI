@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pymongo import ReturnDocument
@@ -55,6 +55,7 @@ class UserRepository:
                 "resume_count": 0,
                 "interviews_taken": 0,
                 "average_score": 0.0,
+                "trial_ends_at": now + timedelta(days=7),
             },
         }
 

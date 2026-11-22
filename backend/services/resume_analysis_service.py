@@ -1,3 +1,5 @@
+import asyncio
+
 from repositories.analysis_repository import AnalysisRepository, AnalysisRepositoryError
 from repositories.billing_repository import BillingRepository
 from repositories.credit_repository import CreditRepository
@@ -142,7 +144,7 @@ async def analyze_resume(
         )
 
     try:
-        gemini_result = analyze_resume_text(extracted_text)
+        gemini_result = await asyncio.to_thread(analyze_resume_text, extracted_text)
     except GeminiConfigurationError as exc:
         if charge_key and billing_repo and credit_repo:
             await safe_refund_ai_operation(

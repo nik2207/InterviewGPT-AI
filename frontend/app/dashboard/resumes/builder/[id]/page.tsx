@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 import { ResumeBuilderPreview } from "@/components/resumes/ResumeBuilderPreview";
+import { getApiErrorMessage } from "@/lib/api/errors";
 import {
   aiAtsFormatting,
   aiImproveBullets,
@@ -45,14 +46,15 @@ export default function ResumeBuilderEditorPage() {
   const [pendingBulletExpId, setPendingBulletExpId] = useState<string | null>(null);
   const [pendingProjectId, setPendingProjectId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
       const data = await fetchResumeBuilder(docId);
       setDoc(data);
       setContent(data.content);
-    } catch {
-      setError("Resume not found.");
+    } catch (cause: unknown) {
+      setError(getApiErrorMessage(cause));
     }
   }, [docId]);
 
@@ -60,10 +62,11 @@ export default function ResumeBuilderEditorPage() {
     load();
   }, [load]);
 
-  async function saveDraft() {
-    if (!doc || !content) return;
+  async function saveDraft(): Promise<boolean> {
+    if (!doc || !content) return false;
     setSaving(true);
     setError(null);
+    setNotice(null);
     try {
       const updated = await updateResumeBuilder(doc.id, {
         title: doc.title,
@@ -73,29 +76,41 @@ export default function ResumeBuilderEditorPage() {
       });
       setDoc(updated);
       setContent(updated.content);
-    } catch {
-      setError("Save failed.");
+      setNotice("Draft saved.");
+      return true;
+    } catch (cause: unknown) {
+      setError(getApiErrorMessage(cause));
+      return false;
     } finally {
       setSaving(false);
     }
   }
 
   async function saveVersion() {
-    await saveDraft();
-    if (!doc) return;
-    const updated = await saveResumeBuilderVersion(doc.id, `Version ${doc.versions.length + 1}`);
-    setDoc(updated);
+    if (!(await saveDraft()) || !doc) return;
+    try {
+      const updated = await saveResumeBuilderVersion(doc.id, `Version ${doc.versions.length + 1}`);
+      setDoc(updated);
+      setNotice(`Version ${updated.versions.length} saved.`);
+    } catch (cause: unknown) {
+      setError(getApiErrorMessage(cause));
+    }
   }
 
   async function downloadPdf() {
     if (!doc) return;
-    const blob = await downloadResumeBuilderPdf(doc.id);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `resume-${doc.id.slice(0, 10)}.pdf`;
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const blob = await downloadResumeBuilderPdf(doc.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `resume-${doc.id.slice(0, 10)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setNotice("PDF downloaded.");
+    } catch (cause: unknown) {
+      setError(getApiErrorMessage(cause));
+    }
   }
 
   function moveSection(key: string, direction: -1 | 1) {
@@ -149,7 +164,8 @@ export default function ResumeBuilderEditorPage() {
             ← Builder list
           </Link>
           <input
-            className="mt-2 block w-full max-w-md text-xl font-semibold text-slate-900"
+            aria-label="Resume title"
+            className="mt-2 block w-full max-w-md rounded-xl border border-slate-200 bg-white px-3 py-2 text-xl font-semibold text-slate-900 shadow-sm"
             value={doc.title}
             onChange={(e) => setDoc({ ...doc, title: e.target.value })}
           />
@@ -167,7 +183,7 @@ export default function ResumeBuilderEditorPage() {
             <option value="professional">Professional template</option>
             <option value="compact">Compact template</option>
           </select>
-          <button type="button" className="btn-secondary" disabled={saving} onClick={saveDraft}>
+          <button type="button" className="btn-secondary" disabled={saving} onClick={() => void saveDraft()}>
             {saving ? "Saving…" : "Save draft"}
           </button>
           <button type="button" className="btn-secondary" onClick={saveVersion}>
@@ -180,17 +196,23 @@ export default function ResumeBuilderEditorPage() {
       </div>
 
       {error ? (
-        <p className="text-sm text-red-600" role="alert">
+        <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
           {error}
         </p>
       ) : null}
+      {notice ? (
+        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800" role="status">
+          {notice}
+        </p>
+      ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="app-card space-y-4 p-4">
-          <nav className="flex flex-wrap gap-2 text-xs">
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(400px,0.9fr)]">
+        <div className="app-card space-y-4 p-4 sm:p-5">
+          <nav className="flex flex-wrap gap-2 border-b border-app-border pb-3 text-xs" aria-label="Resume sections">
             <button
               type="button"
-              className={activeSection === "personal_info" ? "font-bold" : ""}
+              aria-pressed={activeSection === "personal_info"}
+              className={`rounded-full px-3 py-2 font-medium transition ${activeSection === "personal_info" ? "bg-app-primary text-white" : "text-app-muted hover:bg-app-primary-soft hover:text-app-primary"}`}
               onClick={() => setActiveSection("personal_info")}
             >
               Personal
@@ -199,7 +221,8 @@ export default function ResumeBuilderEditorPage() {
               <button
                 key={key}
                 type="button"
-                className={activeSection === key ? "font-bold" : ""}
+                aria-pressed={activeSection === key}
+                className={`rounded-full px-3 py-2 font-medium transition ${activeSection === key ? "bg-app-primary text-white" : "text-app-muted hover:bg-app-primary-soft hover:text-app-primary"}`}
                 onClick={() => setActiveSection(key)}
               >
                 {SECTION_LABELS[key]}

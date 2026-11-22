@@ -4,7 +4,11 @@ from google.genai import types
 from pydantic import ValidationError
 
 from schemas.coaching_schema import CoachingEvidenceBundle, GeminiCoachingPlanPayload
-from services.gemini_client import build_gemini_client, call_with_transient_retries
+from services.gemini_client import (
+    build_gemini_client,
+    call_with_transient_retries,
+    sanitize_provider_error,
+)
 from services.gemini_config import get_gemini_api_key, get_gemini_model
 from core.config.settings import settings
 
@@ -64,7 +68,9 @@ def generate_coaching_plan(bundle: CoachingEvidenceBundle) -> GeminiCoachingPlan
             operation_name="coaching_plan_generation",
         )
     except Exception as exc:
-        logger.warning("Coaching plan generation failed: %s", type(exc).__name__)
+        logger.warning(
+            "Coaching plan generation failed: %s", sanitize_provider_error(exc)
+        )
         raise CoachingGenerationError("Coaching plan generation failed.") from exc
 
     raw_text = getattr(response, "text", None)

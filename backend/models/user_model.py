@@ -20,6 +20,7 @@ class UserInDB(BaseModel):
     resume_count: int = 0
     interviews_taken: int = 0
     average_score: float = 0.0
+    trial_ends_at: datetime | None = None
 
 
 class UserPublic(BaseModel):
@@ -32,6 +33,7 @@ class UserPublic(BaseModel):
     provider: str
     created_at: datetime
     last_login: datetime
+    trial_ends_at: datetime | None = None
 
 
 def user_document_to_public(document: dict[str, Any]) -> UserPublic:
@@ -49,4 +51,5 @@ def user_document_to_public(document: dict[str, Any]) -> UserPublic:
         provider=document.get("provider") or "google",
         created_at=document["created_at"],
         last_login=document["last_login"],
+        trial_ends_at=document.get("trial_ends_at"),
     )

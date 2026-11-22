@@ -1,3 +1,5 @@
+import asyncio
+
 from bson import ObjectId
 
 from repositories.company_prep_repository import CompanyPrepRepository, CompanyPrepRepositoryError
@@ -104,7 +106,8 @@ async def create_company_preparation(
     catalogue_checklist = build_catalogue_checklist_seed(company)
 
     try:
-        questions, generated_checklist = generate_company_prep_content(
+        questions, generated_checklist = await asyncio.to_thread(
+            generate_company_prep_content,
             company=company,
             job_role=payload.job_role.strip(),
             experience_level=payload.experience_level,

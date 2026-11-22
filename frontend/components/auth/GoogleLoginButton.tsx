@@ -24,8 +24,12 @@ export default function GoogleLoginButton() {
     try {
       await loginWithGoogle(credentialResponse.credential);
       router.push("/dashboard");
-    } catch {
-      setLocalError("Unable to sign in. Check your connection and try again.");
+    } catch (cause: unknown) {
+      setLocalError(
+        cause instanceof Error
+          ? cause.message
+          : "Unable to sign in. Check your connection and try again."
+      );
     } finally {
       setIsSubmitting(false);
     }

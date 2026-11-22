@@ -15,6 +15,7 @@ import {
 } from "@/lib/api/preparationPlan";
 import { fetchInterviewHistory } from "@/lib/api/interviews";
 import { fetchResumeAnalysis, fetchResumes } from "@/lib/api/resumes";
+import { getApiErrorMessage } from "@/lib/api/errors";
 import type { PreparationPlanListItem } from "@/types/preparationPlan";
 import type { JobMatchListItem, JobMatchResult } from "@/types/jobMatch";
 import type { InterviewHistoryItem } from "@/types/interview";
@@ -90,8 +91,8 @@ export default function CareerWorkspacePage() {
     try {
       const result = await fetchCoachingPlan(selectedSession);
       setPlan(result);
-    } catch {
-      setError("Unable to generate coaching plan.");
+    } catch (cause: unknown) {
+      setError(getApiErrorMessage(cause));
       setPlan(null);
     } finally {
       setPlanLoading(false);
@@ -112,8 +113,8 @@ export default function CareerWorkspacePage() {
         daily_study_minutes: dailyStudyMinutes,
       });
       router.push(`/dashboard/career/plan?planId=${created.id}`);
-    } catch {
-      setSevenDayError("Could not generate plan. Ensure resume analysis exists.");
+    } catch (cause: unknown) {
+      setSevenDayError(getApiErrorMessage(cause));
     } finally {
       setSevenDayLoading(false);
     }

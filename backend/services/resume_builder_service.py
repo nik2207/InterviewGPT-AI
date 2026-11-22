@@ -1,3 +1,4 @@
+import asyncio
 from uuid import uuid4
 
 from bson import ObjectId
@@ -107,7 +108,7 @@ async def create_resume_builder(
             user_id, payload.source_upload_resume_id
         )
         if analysis and analysis.get("status") == "completed":
-            result = analysis.get("result") or {}
+            result = analysis.get("analysis") or {}
             content["professional_summary"] = (result.get("professional_summary") or "")[
                 :3000
             ]
@@ -365,7 +366,9 @@ async def _get_doc(user_id: str, doc_id: str, repo: ResumeBuilderRepository) -> 
 
 async def _run_ai(feature: str, original: str, context: str) -> ResumeAiProposalResponse:
     try:
-        payload = run_resume_builder_ai(feature=feature, context=context)  # type: ignore[arg-type]
+        payload = await asyncio.to_thread(
+            run_resume_builder_ai, feature=feature, context=context
+        )  # type: ignore[arg-type]
     except ResumeBuilderAiUnavailableError as exc:
         raise ResumeBuilderServiceError(str(exc), status_code=503) from exc
     except ResumeBuilderAiError as exc:

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { PageHeader } from "@/components/ui/PageHeader";
+import { getApiErrorMessage } from "@/lib/api/errors";
 import { createResumeBuilder, listResumeBuilders } from "@/lib/api/resumeBuilder";
 import type { ResumeBuilderListItem } from "@/types/resumeBuilder";
 
@@ -18,7 +19,7 @@ export default function ResumeBuilderListPage() {
   useEffect(() => {
     listResumeBuilders()
       .then(setItems)
-      .catch(() => setError("Unable to load built resumes."))
+      .catch((cause: unknown) => setError(getApiErrorMessage(cause)))
       .finally(() => setLoading(false));
   }, []);
 
@@ -28,8 +29,8 @@ export default function ResumeBuilderListPage() {
     try {
       const doc = await createResumeBuilder({ title: "My resume" });
       router.push(`/dashboard/resumes/builder/${doc.id}`);
-    } catch {
-      setError("Could not create resume.");
+    } catch (cause: unknown) {
+      setError(`Could not create resume: ${getApiErrorMessage(cause)}`);
     } finally {
       setCreating(false);
     }

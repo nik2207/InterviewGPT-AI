@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from core.config.plan_catalog import PlanId, get_plan, load_plan_catalog, meter_reset_period
@@ -51,25 +51,74 @@ def resolve_period_key(
     return _monthly_period_key(now)
 
 
+def _utc(value: datetime) -> datetime:
+    return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
+
+
+async def active_trial_ends_at(
+    billing_repo: BillingRepository,
+    user_id: str,
+    *,
+    subscription: dict | None = None,
+) -> datetime | None:
+    """Return the active trial expiry, excluding accounts on a paid subscription."""
+    if subscription is None:
+        subscription = await billing_repo.get_subscription_for_user(user_id)
+    if subscription:
+        plan_id = subscription.get("plan_id")
+        status = subscription.get("status")
+        period_end = subscription.get("current_period_end")
+        paid_subscription = plan_id in ("pro", "premium") and status in ("active", "cancelled")
+        if paid_subscription and (
+            status != "cancelled"
+            or not isinstance(period_end, datetime)
+            or _utc(period_end) >= datetime.now(timezone.utc)
+        ):
+            return None
+
+    get_user_trial = getattr(billing_repo, "get_user_trial", None)
+    user = await get_user_trial(user_id) if get_user_trial else None
+    if not user:
+        return None
+    trial_end = user.get("trial_ends_at")
+    if not isinstance(trial_end, datetime):
+        created_at = user.get("created_at")
+        trial_end = _utc(created_at) + timedelta(days=7) if isinstance(created_at, datetime) else None
+    if not isinstance(trial_end, datetime):
+        return None
+    trial_end = _utc(trial_end)
+    return trial_end if trial_end > datetime.now(timezone.utc) else None
+
+
+def trial_credit_period_key(trial_end: datetime) -> str:
+    start = _utc(trial_end) - timedelta(days=7)
+    return f"trial-{start.strftime('%Y%m%d')}"
+
+
 async def effective_plan_id(
     billing_repo: BillingRepository,
     user_id: str,
 ) -> PlanId:
     sub = await billing_repo.get_subscription_for_user(user_id)
-    if sub is None:
-        return "free"
-    status = sub.get("status", "expired")
-    plan_id = sub.get("plan_id", "free")
-    if status not in ("active", "cancelled"):
-        return "free"
-    if status == "cancelled":
-        end = sub.get("current_period_end")
-        now = datetime.now(timezone.utc)
-        if isinstance(end, datetime) and end < now:
-            return "free"
-    if plan_id not in ("free", "pro", "premium"):
-        return "free"
-    return plan_id  # type: ignore[return-value]
+    now = datetime.now(timezone.utc)
+    if sub is not None:
+        status = sub.get("status", "expired")
+        plan_id = sub.get("plan_id", "free")
+        if status in ("active", "cancelled") and plan_id in ("free", "pro", "premium"):
+            if status != "cancelled":
+                return plan_id  # type: ignore[return-value]
+            end = sub.get("current_period_end")
+            if isinstance(end, datetime) and end.tzinfo is None:
+                end = end.replace(tzinfo=timezone.utc)
+            if not isinstance(end, datetime) or end >= now:
+                return plan_id  # type: ignore[return-value]
+
+    trial_end = await active_trial_ends_at(
+        billing_repo, user_id, subscription=sub
+    )
+    if trial_end is not None:
+        return "premium"
+    return "free"
 
 
 async def require_feature(
@@ -100,7 +149,16 @@ async def consume_meter(
     plan = get_plan(plan_id)
     limit = int(plan.limits.get(meter, 0))
     sub = await billing_repo.get_subscription_for_user(user_id)
-    period_key = resolve_period_key(meter, sub)
+    trial_end = await active_trial_ends_at(
+        billing_repo, user_id, subscription=sub
+    )
+    period_key = (
+        trial_credit_period_key(trial_end)
+        if meter == "ai_credit" and trial_end is not None
+        else resolve_period_key(meter, sub)
+    )
+    if meter == "ai_credit" and trial_end is not None:
+        limit = 10
 
     if reservation_id:
         existing = await billing_repo.get_reservation(reservation_id)
@@ -134,13 +192,20 @@ async def build_usage_snapshot(
     plan_id = await effective_plan_id(billing_repo, user_id)
     plan = get_plan(plan_id)
     sub = await billing_repo.get_subscription_for_user(user_id)
+    trial_end = await active_trial_ends_at(
+        billing_repo, user_id, subscription=sub
+    )
 
     snapshots = []
     for meter_id, meter_def in catalog.meters.items():
-        period_key = resolve_period_key(meter_id, sub)
+        period_key = (
+            trial_credit_period_key(trial_end)
+            if meter_id == "ai_credit" and trial_end is not None
+            else resolve_period_key(meter_id, sub)
+        )
         usage_doc = await billing_repo.get_usage_document(user_id, period_key)
         used = int((usage_doc or {}).get("meters", {}).get(meter_id, 0))
-        limit = int(plan.limits.get(meter_id, 0))
+        limit = 10 if meter_id == "ai_credit" and trial_end is not None else int(plan.limits.get(meter_id, 0))
         snapshots.append(
             {
                 "meter": meter_id,

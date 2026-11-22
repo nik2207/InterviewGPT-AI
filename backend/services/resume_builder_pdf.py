@@ -5,14 +5,18 @@ from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas
 
 from schemas.resume_builder_schema import ResumeBuilderContent, ResumeBuilderTemplate
+from services.pdf_fonts import pdf_font_for
 
 
 def _draw_line(pdf: canvas.Canvas, y: float, text: str, font: str, size: int) -> float:
-    pdf.setFont(font, size)
+    selected_font = pdf_font_for(text, bold="Bold" in font)
+    if selected_font == "Helvetica" or selected_font == "Helvetica-Bold":
+        selected_font = font
+    pdf.setFont(selected_font, size)
     if y < inch:
         pdf.showPage()
         y = letter[1] - inch
-        pdf.setFont(font, size)
+        pdf.setFont(selected_font, size)
     pdf.drawString(0.75 * inch, y, text[:110])
     return y - (size + 4)
 

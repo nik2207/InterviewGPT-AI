@@ -65,6 +65,7 @@ export default function InterviewRoomPage() {
   const [submissionId, setSubmissionId] = useState(() => newSubmissionId());
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [submissionSlow, setSubmissionSlow] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastFeedback, setLastFeedback] = useState<InterviewAnswer | null>(null);
   const [speechPayload, setSpeechPayload] = useState<{
@@ -75,6 +76,14 @@ export default function InterviewRoomPage() {
   const [mobileCoachOpen, setMobileCoachOpen] = useState(false);
   const [practiceMode, setPracticeMode] = useState(false);
   const [practicePrompt, setPracticePrompt] = useState<string | null>(null);
+  useEffect(() => {
+    if (!submitting) {
+      setSubmissionSlow(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setSubmissionSlow(true), 3000);
+    return () => window.clearTimeout(timer);
+  }, [submitting]);
   const [voiceInterview, setVoiceInterview] = useState<VoiceInterviewState | null>(
     null
   );
@@ -450,7 +459,11 @@ export default function InterviewRoomPage() {
                         onClick={() => handleSubmit(false)}
                         className="btn-primary"
                       >
-                        {submitting ? "Submitting…" : "Submit answer"}
+                        {submitting
+                          ? submissionSlow
+                            ? "Generating feedback…"
+                            : "Submitting…"
+                          : "Submit answer"}
                       </button>
                       {lastFeedback?.evaluation_status === "failed" &&
                       lastFeedback.question_id === currentQuestion.id ? (

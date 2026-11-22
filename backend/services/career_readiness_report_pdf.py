@@ -6,6 +6,7 @@ from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas
 
 from schemas.career_readiness_schema import CareerReadinessReportResponse
+from services.pdf_fonts import pdf_font_for
 
 
 def _truncate(text: str, limit: int = 90) -> str:
@@ -16,18 +17,18 @@ def _truncate(text: str, limit: int = 90) -> str:
 
 
 def _draw_heading(pdf: canvas.Canvas, y: float, title: str) -> float:
-    pdf.setFont("Helvetica-Bold", 13)
+    pdf.setFont(pdf_font_for(title, bold=True), 13)
     pdf.drawString(0.75 * inch, y, title)
     return y - 0.28 * inch
 
 
 def _draw_line(pdf: canvas.Canvas, y: float, text: str) -> float:
-    pdf.setFont("Helvetica", 10)
     if y < inch:
         pdf.showPage()
         y = letter[1] - inch
-        pdf.setFont("Helvetica", 10)
-    pdf.drawString(0.75 * inch, y, _truncate(text, 95))
+    line = _truncate(text, 95)
+    pdf.setFont(pdf_font_for(line), 10)
+    pdf.drawString(0.75 * inch, y, line)
     return y - 14
 
 

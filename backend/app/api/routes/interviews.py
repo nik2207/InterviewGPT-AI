@@ -86,13 +86,6 @@ async def create_session_endpoint(
     mock_key = resolve_idempotency_key(x_idempotency_key)
     voice_key = f"voice-{mock_key}"
     try:
-        await ensure_ai_operation_allowed(
-            billing_repo,
-            credit_repo,
-            current_user.id,
-            "mock_interview_session",
-            idempotency_key=mock_key,
-        )
         if payload.voice_interview_enabled:
             await require_feature(billing_repo, current_user.id, "voice_interview")
             await ensure_ai_operation_allowed(
@@ -101,6 +94,14 @@ async def create_session_endpoint(
                 current_user.id,
                 "voice_interview_session",
                 idempotency_key=voice_key,
+            )
+        else:
+            await ensure_ai_operation_allowed(
+                billing_repo,
+                credit_repo,
+                current_user.id,
+                "mock_interview_session",
+                idempotency_key=mock_key,
             )
         return await create_interview_session(
             user_id=current_user.id,
@@ -114,12 +115,13 @@ async def create_session_endpoint(
     except CreditServiceError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from None
     except InterviewServiceError as exc:
-        await safe_refund_ai_operation(
-            billing_repo, credit_repo, current_user.id, idempotency_key=mock_key
-        )
         if payload.voice_interview_enabled:
             await safe_refund_ai_operation(
                 billing_repo, credit_repo, current_user.id, idempotency_key=voice_key
+            )
+        else:
+            await safe_refund_ai_operation(
+                billing_repo, credit_repo, current_user.id, idempotency_key=mock_key
             )
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from None
 
@@ -151,12 +153,23 @@ async def get_coaching_plan_endpoint(
     analysis_repo: AnalysisRepository = Depends(get_analysis_repository),
 ) -> CoachingPlanResponse:
     try:
-        return await generate_coaching_plan_for_session(
+        result = await generate_coaching_plan_for_session(
             current_user.id,
             session_id,
             interview_repo,
             analysis_repo,
         )
+        if result.status == "generation_failed":
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=result.message or "Coaching plan generation is temporarily unavailable.",
+            )
+        if result.status == "validation_failed":
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=result.message or "The coaching service returned an invalid response.",
+            )
+        return result
     except CoachingPlanServiceError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from None
 

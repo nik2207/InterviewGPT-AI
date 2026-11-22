@@ -6,6 +6,7 @@ from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas
 
 from schemas.interview_schema import SCORING_RULES_DESCRIPTION
+from services.pdf_fonts import pdf_font_for
 
 MAX_LINE_CHARS = 95
 MAX_ANSWER_CHARS = 2500
@@ -38,18 +39,17 @@ def _wrap_lines(text: str, max_chars: int = MAX_LINE_CHARS) -> list[str]:
 
 
 def _draw_heading(pdf: canvas.Canvas, y: float, title: str) -> float:
-    pdf.setFont("Helvetica-Bold", 14)
+    pdf.setFont(pdf_font_for(title, bold=True), 14)
     pdf.drawString(0.75 * inch, y, title)
     return y - 0.3 * inch
 
 
 def _draw_body_lines(pdf: canvas.Canvas, y: float, lines: list[str]) -> float:
-    pdf.setFont("Helvetica", 10)
     for line in lines:
         if y < inch:
             pdf.showPage()
             y = letter[1] - inch
-            pdf.setFont("Helvetica", 10)
+        pdf.setFont(pdf_font_for(line), 10)
         pdf.drawString(0.75 * inch, y, line)
         y -= 14
     return y
@@ -73,7 +73,7 @@ def generate_interview_report_pdf(session: dict) -> bytes:
     average_score = summary.get("average_score")
 
     y = _draw_heading(pdf, y, "InterviewGPT — Mock Interview Report")
-    pdf.setFont("Helvetica", 10)
+    pdf.setFont(pdf_font_for(f"Role: {role}"), 10)
     pdf.drawString(0.75 * inch, y, f"Role: {role}")
     y -= 14
     pdf.drawString(0.75 * inch, y, f"Completed: {date_label}")
@@ -123,18 +123,18 @@ def generate_interview_report_pdf(session: dict) -> bytes:
             pdf.showPage()
             y = height - inch
 
-        pdf.setFont("Helvetica-Bold", 11)
+        pdf.setFont(pdf_font_for(f"Q{index}", bold=True), 11)
         pdf.drawString(0.75 * inch, y, f"Q{index}")
         y -= 16
         y = _draw_body_lines(pdf, y, _wrap_lines(q_text))
 
-        pdf.setFont("Helvetica-Oblique", 10)
+        pdf.setFont(pdf_font_for("Answer:"), 10)
         y = _draw_body_lines(pdf, y, ["Answer:"])
         y = _draw_body_lines(pdf, y, _wrap_lines(answer.get("answer_text", "")))
 
         evaluation = answer.get("evaluation")
         if evaluation:
-            pdf.setFont("Helvetica-Bold", 10)
+            pdf.setFont(pdf_font_for("Score:", bold=True), 10)
             y = _draw_body_lines(
                 pdf,
                 y,

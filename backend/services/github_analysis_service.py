@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from bson import ObjectId
 
@@ -219,7 +220,8 @@ async def run_github_analyses(
         ]
 
         try:
-            gemini = generate_github_repo_analysis(
+            gemini = await asyncio.to_thread(
+                generate_github_repo_analysis,
                 full_name=full_name,
                 metadata=metadata,
                 readme=readme,

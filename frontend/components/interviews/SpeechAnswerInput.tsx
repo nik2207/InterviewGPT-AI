@@ -32,12 +32,14 @@ export function SpeechAnswerInput({
   recognitionLocale = "en-US",
 }: SpeechAnswerInputProps) {
   const [inputMode, setInputMode] = useState<InputMode>("typed");
+  const speechBaseRef = useRef("");
   const localeHint = speechRecognitionHintMessage(answerLanguage);
   const speech = useSpeechRecognition({
     recognitionLang: recognitionLocale,
     onTranscript: (text) => {
       setInputMode((prev) => (prev === "typed" ? "speech" : "mixed"));
-      onChange(text);
+      const base = speechBaseRef.current;
+      onChange(base ? `${base}${text ? ` ${text}` : ""}` : text);
     },
   });
 
@@ -111,7 +113,10 @@ export function SpeechAnswerInput({
           <button
             type="button"
             disabled={disabled || speech.permissionState === "listening"}
-            onClick={() => speech.start()}
+            onClick={() => {
+              speechBaseRef.current = value.trim();
+              speech.start();
+            }}
             className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-60"
           >
             {speech.permissionState === "listening"

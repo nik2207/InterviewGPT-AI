@@ -14,6 +14,7 @@ import {
   loginWithGoogleIdToken,
   logoutSession,
 } from "@/lib/api/auth";
+import { getApiErrorMessage } from "@/lib/api/errors";
 import { getAccessToken } from "@/lib/auth-storage";
 import type { UserProfile } from "@/types/user";
 
@@ -66,11 +67,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await loginWithGoogleIdToken(googleIdToken);
       setUser(response.user);
       setStatus("authenticated");
-    } catch {
+    } catch (cause: unknown) {
       setUser(null);
       setStatus("unauthenticated");
-      setError("Sign-in failed. Please try again.");
-      throw new Error("Sign-in failed");
+      const message = getApiErrorMessage(cause);
+      setError(message);
+      throw new Error(message);
     }
   }, []);
 

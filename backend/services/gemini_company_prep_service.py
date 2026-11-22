@@ -14,7 +14,11 @@ from schemas.company_prep_schema import (
     GeminiCompanyPrepPayload,
     PrepCategory,
 )
-from services.gemini_client import build_gemini_client, call_with_transient_retries
+from services.gemini_client import (
+    build_gemini_client,
+    call_with_transient_retries,
+    sanitize_provider_error,
+)
 from services.gemini_config import get_gemini_api_key, get_gemini_model
 
 logger = logging.getLogger(__name__)
@@ -146,7 +150,9 @@ def generate_company_prep_content(
             operation_name="gemini_company_prep",
         )
     except Exception as exc:
-        logger.warning("Company prep generation failed: %s", type(exc).__name__)
+        logger.warning(
+            "Company prep generation failed: %s", sanitize_provider_error(exc)
+        )
         raise CompanyPrepGeminiUnavailableError("Generation unavailable.") from exc
 
     raw_text = getattr(response, "text", None)
