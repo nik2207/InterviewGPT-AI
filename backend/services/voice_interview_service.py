@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timezone
 
 from repositories.interview_repository import InterviewRepository, InterviewRepositoryError
@@ -141,7 +142,8 @@ async def request_clarification(
 
     try:
         lang_settings = resolve_language_settings(session)
-        result = evaluate_voice_clarification(
+        result = await asyncio.to_thread(
+            evaluate_voice_clarification,
             role=session.get("role", "Interview"),
             question=question.get("question", ""),
             category=question.get("category", "general"),

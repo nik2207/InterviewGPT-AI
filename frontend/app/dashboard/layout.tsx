@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
+import { TrialUpgradePrompt } from "@/components/billing/TrialUpgradePrompt";
+import { UpgradeRequiredModal } from "@/components/billing/UpgradeRequiredModal";
 import { useAuth } from "@/providers/auth-provider";
 
 export default function DashboardLayout({
@@ -47,7 +49,13 @@ export default function DashboardLayout({
           }}
           onMenuToggle={() => setSidebarOpen(true)}
         />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
+        <main className="flex-1 p-4 sm:p-6 lg:p-8">
+          <div className="mx-auto w-full max-w-[1600px]">
+            <TrialUpgradePrompt user={user} />
+            <UpgradeRequiredModal />
+            {children}
+          </div>
+        </main>
       </div>
     </div>
   );

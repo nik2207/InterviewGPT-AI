@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timezone
 
 from repositories.analysis_repository import AnalysisRepository
@@ -42,7 +43,7 @@ async def generate_coaching_plan_for_session(
         history_sessions=history,
     )
 
-    result = run_coaching_plan_workflow(evidence)
+    result = await asyncio.to_thread(run_coaching_plan_workflow, evidence)
     status = result.get("status", "generation_failed")
     plan = result.get("plan")
 

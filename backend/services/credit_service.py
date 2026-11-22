@@ -7,9 +7,11 @@ from repositories.billing_repository import BillingRepository, MeterLimitExceede
 from repositories.credit_repository import CreditRepository, CreditRepositoryError, InsufficientCredits
 from services.entitlement_service import (
     EntitlementError,
+    active_trial_ends_at,
     consume_meter,
     effective_plan_id,
     resolve_period_key,
+    trial_credit_period_key,
 )
 
 
@@ -28,10 +30,17 @@ async def get_balance_view(
     plan_id = await effective_plan_id(billing_repo, user_id)
     plan = get_plan(plan_id)
     sub = await billing_repo.get_subscription_for_user(user_id)
-    period_key = resolve_period_key(catalog.plan_allowance_meter, sub)
+    trial_end = await active_trial_ends_at(
+        billing_repo, user_id, subscription=sub
+    )
+    period_key = (
+        trial_credit_period_key(trial_end)
+        if trial_end is not None
+        else resolve_period_key(catalog.plan_allowance_meter, sub)
+    )
     usage = await billing_repo.get_usage_document(user_id, period_key)
     used = int((usage or {}).get("meters", {}).get(catalog.plan_allowance_meter, 0))
-    limit = int(plan.limits.get(catalog.plan_allowance_meter, 0))
+    limit = 10 if trial_end is not None else int(plan.limits.get(catalog.plan_allowance_meter, 0))
     plan_remaining = max(0, limit - used)
 
     account = await credit_repo.ensure_account(user_id)
@@ -73,8 +82,12 @@ async def ensure_ai_operation_allowed(
             raise CreditServiceError("Idempotency key already refunded.", status_code=409)
 
     op = get_operation_cost(operation)
+    sub = await billing_repo.get_subscription_for_user(user_id)
+    trial_end = await active_trial_ends_at(
+        billing_repo, user_id, subscription=sub
+    )
 
-    if try_meter_first and op.meter_fallback:
+    if try_meter_first and op.meter_fallback and trial_end is None:
         try:
             await consume_meter(
                 billing_repo,
@@ -108,10 +121,13 @@ async def ensure_ai_operation_allowed(
     cost = op.credit_cost
     plan_id = await effective_plan_id(billing_repo, user_id)
     plan = get_plan(plan_id)
-    sub = await billing_repo.get_subscription_for_user(user_id)
     catalog = load_credit_catalog()
-    period_key = resolve_period_key(catalog.plan_allowance_meter, sub)
-    allowance_limit = int(plan.limits.get(catalog.plan_allowance_meter, 0))
+    period_key = (
+        trial_credit_period_key(trial_end)
+        if trial_end is not None
+        else resolve_period_key(catalog.plan_allowance_meter, sub)
+    )
+    allowance_limit = 10 if trial_end is not None else int(plan.limits.get(catalog.plan_allowance_meter, 0))
 
     source = "plan_allowance"
     try:
@@ -127,8 +143,14 @@ async def ensure_ai_operation_allowed(
             await credit_repo.debit_purchased(user_id, cost)
             source = "purchased"
         except InsufficientCredits as exc:
+            message = (
+                "You have used the 10 AI credits included in your 7-day trial. "
+                "Upgrade your plan or top up credits to continue."
+                if trial_end is not None
+                else "Insufficient AI credits. Top up or upgrade your plan."
+            )
             raise CreditServiceError(
-                "Insufficient AI credits. Top up or upgrade your plan.",
+                message,
                 status_code=402,
             ) from exc
 

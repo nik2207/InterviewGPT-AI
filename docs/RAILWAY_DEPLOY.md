@@ -44,6 +44,7 @@ Database: use **MongoDB Atlas** (recommended). Railway MongoDB is optional; poin
 | `CORS_ORIGIN` | Yes | `https://YOUR-FRONTEND.up.railway.app` (comma-separated for multiple) |
 | `GEMINI_API_KEY` | For AI | |
 | `GEMINI_MODEL` | No | `gemini-2.0-flash` |
+| `PDF_UNICODE_FONT_PATH` | Multilingual PDFs | Optional path to a Unicode `.ttf` file available inside the API container (for example, a mounted Noto Sans font). |
 | `GITHUB_TOKEN` | Optional | Raises GitHub API limits |
 | `RAZORPAY_*` | Billing | See `backend/.env.example` / settings |
 | `BILLING_DEV_CHECKOUT` | Staging | `true` only for non-production tests |
@@ -148,12 +149,4 @@ Replace `YOUR_BRANCH` with the branch Railway watches (e.g. `development_nikhil`
 
 ## Architecture diagram
 
-```mermaid
-flowchart LR
-  User[Browser] --> Web[Railway Next.js frontend]
-  Web --> API[Railway FastAPI backend]
-  API --> Atlas[(MongoDB Atlas)]
-  API --> Gemini[Gemini API]
-  User --> Google[Google OAuth]
-  Web --> Google
-```
+See [architecture.md](architecture.md) for the layer and data-flow diagram.

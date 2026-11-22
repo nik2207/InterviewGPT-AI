@@ -1,4 +1,5 @@
 from uuid import uuid4
+import asyncio
 
 from core.config.settings import settings
 from repositories.interview_repository import InterviewRepository, InterviewRepositoryError
@@ -102,7 +103,8 @@ async def maybe_insert_follow_up(
 
     existing_text = [q.get("question", "") for q in questions]
     try:
-        gemini = generate_follow_up_question(
+        gemini = await asyncio.to_thread(
+            generate_follow_up_question,
             role=session.get("role", "Interview"),
             interview_type=session.get("interview_type", "mixed"),
             parent_question=parent_question,

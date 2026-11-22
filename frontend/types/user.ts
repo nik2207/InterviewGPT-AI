@@ -6,6 +6,7 @@ export interface UserProfile {
   provider: string;
   created_at: string;
   last_login: string;
+  trial_ends_at?: string | null;
 }
 
 export interface GoogleAuthResponse {

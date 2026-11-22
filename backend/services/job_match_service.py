@@ -1,3 +1,5 @@
+import asyncio
+
 from bson import ObjectId
 
 from repositories.analysis_repository import AnalysisRepository
@@ -114,7 +116,8 @@ async def create_job_match(
     analysis_summary = f"{summary}\n\nExperience:\n{experience}"
 
     try:
-        gemini_payload = analyze_job_match_with_gemini(
+        gemini_payload = await asyncio.to_thread(
+            analyze_job_match_with_gemini,
             resume_text=extracted_text,
             analysis_summary=analysis_summary,
             skills=skills,

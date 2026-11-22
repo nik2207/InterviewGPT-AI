@@ -7,6 +7,7 @@ from reportlab.pdfgen import canvas
 
 from schemas.interview_schema import TRANSCRIPT_TEXT_DISCLAIMER
 from services.transcript_review_service import build_transcript_review
+from services.pdf_fonts import pdf_font_for
 
 
 def _truncate(text: str, limit: int) -> str:
@@ -36,12 +37,11 @@ def _wrap(text: str, max_chars: int = 95) -> list[str]:
 
 
 def _draw(pdf: canvas.Canvas, y: float, lines: list[str], bold: bool = False) -> float:
-    pdf.setFont("Helvetica-Bold" if bold else "Helvetica", 10)
     for line in lines:
         if y < inch:
             pdf.showPage()
             y = letter[1] - inch
-            pdf.setFont("Helvetica-Bold" if bold else "Helvetica", 10)
+        pdf.setFont(pdf_font_for(line, bold=bold), 10)
         pdf.drawString(0.75 * inch, y, line)
         y -= 14
     return y

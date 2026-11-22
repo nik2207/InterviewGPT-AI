@@ -1,3 +1,4 @@
+import asyncio
 from datetime import date, datetime, timedelta, timezone
 
 from bson import ObjectId
@@ -237,7 +238,7 @@ async def generate_preparation_plan(
         interview_sessions=sessions,
     )
 
-    result = run_preparation_plan_workflow(evidence)
+    result = await asyncio.to_thread(run_preparation_plan_workflow, evidence)
     status = result.get("status")
     if status != "completed" or result.get("plan") is None:
         message = result.get("message") or "Plan generation failed."

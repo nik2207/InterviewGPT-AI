@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from bson import ObjectId
 from bson.errors import InvalidId
@@ -28,6 +28,7 @@ class BillingRepository:
         self._webhooks = db[WEBHOOK_EVENTS_COLLECTION]
         self._ledger = db[BILLING_LEDGER_COLLECTION]
         self._reservations = db[CONSUMPTION_RESERVATIONS_COLLECTION]
+        self._users = db["users"]
         self._indexes_ensured = False
 
     async def ensure_indexes(self) -> None:
@@ -55,6 +56,33 @@ class BillingRepository:
     async def get_subscription_for_user(self, user_id: str) -> dict | None:
         await self.ensure_indexes()
         return await self._subs.find_one({"user_id": user_id})
+
+    async def get_user_trial(self, user_id: str) -> dict | None:
+        """Read trial dates, granting legacy accounts a one-time rollout trial."""
+        users_collection = getattr(self, "_users", None)
+        if users_collection is None:
+            return None
+        try:
+            object_id = ObjectId(user_id)
+        except InvalidId:
+            return None
+        projection = {"trial_ends_at": 1, "created_at": 1}
+        now = datetime.now(timezone.utc)
+        document = await users_collection.find_one_and_update(
+            {
+                "_id": object_id,
+                "$or": [
+                    {"trial_ends_at": {"$exists": False}},
+                    {"trial_ends_at": None},
+                ],
+            },
+            {"$set": {"trial_ends_at": now + timedelta(days=7)}},
+            projection=projection,
+            return_document=ReturnDocument.AFTER,
+        )
+        if document is not None:
+            return document
+        return await users_collection.find_one({"_id": object_id}, projection)
 
     async def get_subscription_by_razorpay_id(self, razorpay_subscription_id: str) -> dict | None:
         await self.ensure_indexes()

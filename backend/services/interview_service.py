@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timezone
 from uuid import uuid4
 
@@ -186,8 +187,10 @@ async def create_interview_session(
         )
     if language_settings.question_language != "en":
         try:
-            questions = localize_interview_questions(
-                questions, language_settings.question_language
+            questions = await asyncio.to_thread(
+                localize_interview_questions,
+                questions,
+                language_settings.question_language,
             )
         except QuestionLocalizationError:
             pass
@@ -529,7 +532,8 @@ async def submit_answer(
         document = updated
 
     try:
-        evaluation = evaluate_answer_text(
+        evaluation = await asyncio.to_thread(
+            evaluate_answer_text,
             role=document["role"],
             question=question["question"],
             category=question.get("category", "general"),

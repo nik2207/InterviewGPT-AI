@@ -25,6 +25,17 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       clearAccessToken();
     }
+    if (error.response?.status === 402 && typeof window !== "undefined") {
+      const detail = error.response.data?.detail;
+      window.dispatchEvent(
+        new CustomEvent("app:upgrade-required", {
+          detail:
+            typeof detail === "string"
+              ? detail
+              : "This action needs an active plan or more AI credits.",
+        })
+      );
+    }
     return Promise.reject(error);
   }
 );

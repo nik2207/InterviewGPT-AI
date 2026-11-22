@@ -22,10 +22,21 @@ export function ResumeBuilderPreview({
         : "font-sans";
 
   const { personal_info: p } = content;
+  const hasResumeDetails = Boolean(
+    content.professional_summary.trim() ||
+      content.education.length ||
+      content.work_experience.length ||
+      content.internships.length ||
+      content.technical_skills.length ||
+      content.projects.length ||
+      content.certifications.length ||
+      content.achievements.length ||
+      content.languages.length
+  );
 
   return (
     <article
-      className={`mx-auto max-w-xl rounded-lg border border-slate-200 bg-white p-8 shadow-sm ${fontClass}`}
+      className={`mx-auto min-h-[680px] w-full max-w-xl self-start rounded-xl border border-slate-200 bg-white p-8 shadow-lg sm:p-10 ${fontClass}`}
       aria-label="Resume preview"
     >
       <header className="border-b border-slate-200 pb-3">
@@ -39,6 +50,15 @@ export function ResumeBuilderPreview({
           {[p.linkedin, p.github, p.portfolio].filter(Boolean).join(" · ")}
         </p>
       </header>
+
+      {!hasResumeDetails ? (
+        <div className="mt-6 rounded-xl border border-dashed border-violet-300 bg-violet-50/70 p-5" role="status">
+          <p className="text-sm font-semibold text-slate-900">Your resume is taking shape</p>
+          <p className="mt-1 text-sm leading-6 text-slate-600">
+            Add a summary, skills, education, or experience from the editor. Your sections will appear here as you fill them in.
+          </p>
+        </div>
+      ) : null}
 
       {sectionOrder.map((key) => {
         if (key === "professional_summary" && content.professional_summary.trim()) {
