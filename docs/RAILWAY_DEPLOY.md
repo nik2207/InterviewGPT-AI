@@ -5,8 +5,8 @@ Monorepo: deploy **two Railway services** from one GitHub repo
 
 | Service | Root directory | Config |
 |---------|----------------|--------|
-| **API** (FastAPI) | `backend` | `backend/railway.toml` |
-| **Web** (Next.js) | `frontend` | `frontend/railway.toml` |
+| **API** (FastAPI) | `/backend` | `/backend/railway.toml` |
+| **Web** (Next.js) | `/frontend` | `/frontend/railway.toml` |
 
 Database: use **MongoDB Atlas** (recommended). Railway MongoDB is optional; point `MONGODB_URL` at Atlas either way.
 
@@ -29,9 +29,17 @@ Database: use **MongoDB Atlas** (recommended). Railway MongoDB is optional; poin
 
 ### Backend service (API)
 
-1. Open the service → **Settings** → **Root Directory** → set `backend`.
-2. **Settings** → **Networking** → **Generate Domain** (e.g. `interviewgpt-api-production.up.railway.app`).
-3. Copy the public URL — you need it for `CORS_ORIGIN` and `NEXT_PUBLIC_API_URL`.
+1. Open the API service → **Settings** → **Source** → **Root Directory** → set `/backend`.
+2. In **Settings** → **Build** → **Railway Config File**, set `/backend/railway.toml`. Railway resolves this path from the repository root, independently of the service root directory. If the file is not selected, Railpack can miss the Uvicorn start command and report **No start command detected**.
+3. Confirm **Settings** → **Deploy** → **Custom Start Command** is:
+
+   ```text
+   uvicorn app.main:app --host 0.0.0.0 --port $PORT
+   ```
+
+   The backend `railway.toml` already defines this command. The dashboard command is a fallback if the config file path is not being applied. Keep the root directory `/backend` so `app.main:app` resolves correctly.
+4. **Settings** → **Networking** → **Generate Domain** (e.g. `interviewgpt-api-production.up.railway.app`).
+5. Copy the public URL — you need it for `CORS_ORIGIN` and `NEXT_PUBLIC_API_URL`.
 
 **Variables** (Settings → Variables):
 
@@ -43,7 +51,7 @@ Database: use **MongoDB Atlas** (recommended). Railway MongoDB is optional; poin
 | `GOOGLE_CLIENT_ID` | Yes | `xxx.apps.googleusercontent.com` |
 | `CORS_ORIGIN` | Yes | `https://YOUR-FRONTEND.up.railway.app` (comma-separated for multiple) |
 | `GEMINI_API_KEY` | For AI | |
-| `GEMINI_MODEL` | No | `gemini-2.0-flash` |
+| `GEMINI_MODEL` | No | `gemini-3.8-flash` |
 | `PDF_UNICODE_FONT_PATH` | Multilingual PDFs | Optional path to a Unicode `.ttf` file available inside the API container (for example, a mounted Noto Sans font). |
 | `GITHUB_TOKEN` | Optional | Raises GitHub API limits |
 | `RAZORPAY_*` | Billing | See `backend/.env.example` / settings |
@@ -51,14 +59,27 @@ Database: use **MongoDB Atlas** (recommended). Railway MongoDB is optional; poin
 
 Do **not** commit `.env` files. Railway injects these at runtime.
 
-4. Redeploy after variables are set.
-5. Smoke test: `https://YOUR-API.up.railway.app/health` → `{"status":"healthy"}`.
+6. Redeploy after variables are set.
+7. Smoke test: `https://YOUR-API.up.railway.app/health` → `{"status":"healthy"}`.
 
 ### Frontend service (Next.js)
 
 1. In the same Railway project: **+ New** → **GitHub Repo** → same repository (second service).
-2. **Root Directory** → `frontend`.
-3. **Networking** → **Generate Domain** (e.g. `interviewgpt-web-production.up.railway.app`).
+2. Set **Root Directory** to `/frontend` and **Railway Config File** to `/frontend/railway.toml`.
+3. In **Settings** → **Build** → **Custom Build Command**, enter:
+
+   ```text
+   npm run build
+   ```
+
+   Railpack already runs `npm ci` from the lockfile as its install step, so do not repeat it in the build command. Do not put `npm run start` in this field; Build runs while Railway is creating the image.
+4. In **Settings** → **Deploy** → **Custom Start Command**, enter:
+
+   ```text
+   npm run start -- -p $PORT
+   ```
+
+5. **Networking** → **Generate Domain** (e.g. `interviewgpt-web-production.up.railway.app`).
 
 **Variables** (set before or trigger rebuild after change — `NEXT_PUBLIC_*` is baked in at **build** time):
 
@@ -68,8 +89,8 @@ Do **not** commit `.env` files. Railway injects these at runtime.
 | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Yes | Same as backend |
 | `NODE_VERSION` | Optional | `20` if build fails on Node version |
 
-4. **Update backend** `CORS_ORIGIN` to include the frontend Railway URL, then redeploy API.
-5. Open the frontend URL and sign in with Google.
+6. **Update backend** `CORS_ORIGIN` to include the frontend Railway URL, then redeploy API.
+7. Open the frontend URL and sign in with Google.
 
 ---
 
